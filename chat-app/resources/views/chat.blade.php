@@ -1,4 +1,19 @@
-<!-- chat.blade.php -->
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -49,17 +64,7 @@
 
 <div class="container mt-4">
     <div class="chat-container" id="chat-box">
-        <!-- Message from other user -->
-        <div class="message-box message-left">
-            <p><strong>Other User:</strong> Hello! How are you?</p>
-        </div>
-
-        <!-- Message from current user -->
-        <div class="message-box message-right">
-            <p>Hi! I'm good, thank you! How about you?</p>
-        </div>
-
-        <!-- Additional messages can be appended here -->
+        <!-- Chat messages will be appended here dynamically -->
     </div>
 
     <!-- Message input area -->
@@ -69,22 +74,57 @@
     </div>
 </div>
 
-<!-- Optional JavaScript -->
+<!-- Pusher and Axios JS -->
+<script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+
 <script>
+    // Initialize Pusher
+    Pusher.logToConsole = true;
+    const pusher = new Pusher("{{ env('PUSHER_APP_KEY') }}", {
+        cluster: "{{ env('PUSHER_APP_CLUSTER') }}",
+        encrypted: true
+    });
+
+    // Subscribe to the 'chat-channel' channel
+    const channel = pusher.subscribe('chat-app');//private-chat-app
+
+    // Listen for 'message-sent' events
+    channel.bind('message.sent', function(data) {
+        const messageBox = document.createElement('div');
+        messageBox.classList.add('message-box', 'message-left');
+        messageBox.innerHTML = `<p><strong>${data.user.name}:</strong> ${data.message}</p>`;
+        document.getElementById('chat-box').appendChild(messageBox);
+        document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+    });
+
+    // Function to send a message
     function sendMessage() {
         const messageInput = document.getElementById('message-input');
         const messageText = messageInput.value.trim();
+
         if (messageText) {
+            // Append the message to the chat window immediately
             const messageBox = document.createElement('div');
             messageBox.classList.add('message-box', 'message-right');
             messageBox.innerHTML = `<p>${messageText}</p>`;
             document.getElementById('chat-box').appendChild(messageBox);
+            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+
+            // Send the message to the backend
+            axios.post('/chat/send', {
+                message: messageText
+            }).then(response => {
+                console.log(response.data.status);
+            }).catch(error => console.error(error));
+
+            // Clear the input field
             messageInput.value = '';
             messageInput.focus();
-            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
         }
     }
 </script>
 
 </body>
 </html>
+
