@@ -1,124 +1,130 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Laravel Chat</title>
-    <link rel="stylesheet" href="{{ asset('css/app.css') }}">
-    <script src="https://js.pusher.com/8.0/pusher.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-    @vite(['resources/js/app.js'])
+    <title>Chat Application</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .chat-box {
-            max-height: 400px;
-            overflow-y: auto;
-            padding: 10px;
-            background: #f9f9f9;
-            border-radius: 5px;
+        /* Custom styles for chat boxes */
+        .chat-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            height: 80vh;
+            overflow-y: scroll;
+            border: 1px solid #ccc;
+            border-radius: 10px;
         }
-        .chat-message {
+        .message-box {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 10px;
             max-width: 75%;
-            padding: 10px;
-            border-radius: 15px;
-            margin-bottom: 10px;
-            display: inline-block;
-            position: relative;
         }
-        .chat-message.user {
-            background-color: #0d6efd;
-            color: white;
-            align-self: flex-end;
+        .message-left {
+            background-color: #f1f1f1;
+            text-align: left;
+        }
+        .message-right {
+            background-color: #007bff;
+            color: #fff;
+            text-align: right;
             margin-left: auto;
         }
-        .chat-message.other {
-            background-color: #e1e1e1;
-            color: #333;
-            align-self: flex-start;
-            margin-right: auto;
-        }
-        .chat-message .timestamp {
-            font-size: 0.75rem;
-            color: #666;
-            text-align: right;
-            margin-top: 5px;
+        .input-group {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 10px;
+            background: #fff;
         }
     </style>
 </head>
 <body>
-    <div class="container py-5">
-        <div class="row d-flex justify-content-center">
-            <div class="col-md-10 col-lg-8 col-xl-6">
-                <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center p-3">
-                        <h5 class="mb-0">Chat</h5>
-                    </div>
-                    <div id="chat" class="card-body chat-box d-flex flex-column" style="height: 400px;">
-                        <!-- Messages will be dynamically loaded here -->
-                    </div>
-                    <div class="card-footer d-flex justify-content-start align-items-center p-3">
-                        <form id="chat-form" class="d-flex w-100">
-                            @csrf
-                            <input type="text" id="message" class="form-control form-control-lg mx-2"
-                                   placeholder="Type a message" required>
-                            <button type="submit" class="btn btn-primary"><i class="fas fa-paper-plane"></i></button>
-                        </form>
-                    </div>
-                </div>
-            </div>
-        </div>
+
+<div class="container mt-4">
+    <div class="chat-container" id="chat-box">
+        <!-- Chat messages will be appended here dynamically -->
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Initialize Pusher
-            const pusher = new Pusher('{{ env("PUSHER_APP_KEY") }}', {
-                cluster: '{{ env("PUSHER_APP_CLUSTER") }}',
-                encrypted: true,
-                forceTLS: true,
-                authEndpoint: '/broadcasting/auth',
-                auth: { headers: { 'X-CSRF-Token': '{{ csrf_token() }}' }}
-            });
+    <!-- Message input area -->
+    <div class="input-group">
+        <input type="text" id="message-input" class="form-control" placeholder="Type a message">
+        <button class="btn btn-primary" onclick="sendMessage()">Send</button>
+    </div>
+</div>
 
-            // Subscribe to the private chat-app channel
-            const channel = pusher.subscribe('private-chat-app');
+<!-- Pusher and Axios JS -->
+<script src="https://js.pusher.com/7.0/pusher.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
 
-            // Listen for broadcasted messages
-            channel.bind('App\\Events\\MessageSent', function(data) {
-                displayMessage(data.user, data.message);
-            });
+<script>
+    // Initialize Pusher
+    Pusher.logToConsole = true;
+    const pusher = new Pusher("{{ env('PUSHER_APP_KEY') }}", {
+        cluster: "{{ env('PUSHER_APP_CLUSTER') }}",
+        encrypted: true
+    });
 
-            // Handle message form submission
-            const form = document.getElementById('chat-form');
-            form.addEventListener('submit', function (e) {
-                e.preventDefault();
-                const messageInput = document.getElementById('message');
-                axios.post('/chat/send', { message: messageInput.value })
-                    .then(() => messageInput.value = '')
-                    .catch(error => console.error(error));
-            });
+    // Subscribe to the 'chat-channel' channel
+    const channel = pusher.subscribe('chat-app');//private-chat-app
 
-            // Function to display a message
-            function displayMessage(user, message) {
-                const chatBox = document.getElementById('chat');
-                const messageElement = document.createElement('div');
+    // Listen for 'message-sent' events
+    channel.bind('message.sent', function(data) {
+        const messageBox = document.createElement('div');
+        messageBox.classList.add('message-box', 'message-left');
+        messageBox.innerHTML = `<p><strong>${data.user.name}:</strong> ${data.message}</p>`;
+        document.getElementById('chat-box').appendChild(messageBox);
+        document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+    });
 
-                // Determine if the message was sent by the logged-in user
-                const isCurrentUser = user.id === {{ auth()->id() }};
-                
-                // Add styling based on who sent the message
-                messageElement.classList.add('chat-message', isCurrentUser ? 'user' : 'other');
-                
-                // Create the message bubble with timestamp
-                messageElement.innerHTML = `
-                    <div>${message}</div>
-                    <div class="timestamp">${new Date().toLocaleTimeString()}</div>
-                `;
+    // Function to send a message
+    function sendMessage() {
+        const messageInput = document.getElementById('message-input');
+        const messageText = messageInput.value.trim();
 
-                // Append message and auto-scroll
-                chatBox.appendChild(messageElement);
-                chatBox.scrollTop = chatBox.scrollHeight; // Auto-scroll to the latest message
-            }
-        });
-    </script>
+        if (messageText) {
+            // Append the message to the chat window immediately
+            const messageBox = document.createElement('div');
+            messageBox.classList.add('message-box', 'message-right');
+            messageBox.innerHTML = `<p>${messageText}</p>`;
+            document.getElementById('chat-box').appendChild(messageBox);
+            document.getElementById('chat-box').scrollTop = document.getElementById('chat-box').scrollHeight;
+
+            // Send the message to the backend
+            axios.post('/chat/send', {
+                message: messageText
+            }).then(response => {
+                console.log(response.data.status);
+            }).catch(error => console.error(error));
+
+            // Clear the input field
+            messageInput.value = '';
+            messageInput.focus();
+        }
+    }
+</script>
+
 </body>
 </html>
+
