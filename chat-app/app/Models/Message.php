@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 class Message extends Model
 {
     use HasFactory;
-    protected $fillable = ['message']; 
+    protected $fillable = ['user_id', 'session_id', 'message', 'is_admin'];
 
     // Define the relationship to the User model
     public function user()

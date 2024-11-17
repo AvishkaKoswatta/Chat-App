@@ -13,10 +13,13 @@ return new class extends Migration
     {
         Schema::create('messages', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('user_id')->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->nullable(); // For logged-in users
+            $table->string('session_id')->nullable(); // For guest users
             $table->text('message');
+            $table->boolean('is_admin')->default(false); // True if the admin sent it
             $table->timestamps();
         });
+        
     }
 
     /**
