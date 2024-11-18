@@ -42,7 +42,7 @@ class ChatController extends Controller
 public function sendAdminMessage(Request $request)
 {
     $message = Message::create([
-        'user_id' => $request->input('user_id'), // ID of the user being replied to
+        'user_id' => $request->input('user_id'),
         'message' => $request->input('message'),
         'is_admin' => true,
     ]);

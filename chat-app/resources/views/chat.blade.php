@@ -51,7 +51,7 @@
         <!-- Chat messages will be appended here dynamically -->
     </div>
 
-    <!-- Message input area -->
+    
     <div class="input-group">
         <input type="text" id="message-input" class="form-control" placeholder="Type a message">
         <button class="btn btn-primary" onclick="sendMessage()">Send</button>
